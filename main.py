@@ -1,0 +1,46 @@
+import serial
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import time
+
+# Set up the serial connection (adjust '/dev/tty/ACM0' to your Arduino port) #if you use COM3 and that is connected to a converter, will it still activate?
+arduino = serial.Serial(port='/dev/tty/ACM0', baudrate= 115200)
+time.sleep(2) #let arduino have time to reset
+
+# Create lists to store time and proximity data
+time_data = []
+proximity_data = []
+
+# Set up the plot
+fig, ax = plt.subplots()
+line, = ax.plot([], [], lw=2) #lw is 
+ax.set_xlim(0, 100)  # Set x-axis limits
+ax.set_ylim(0, 700)  # Set y-axis limits, if a value goes above the lmit, what happens?
+ax.set_xlabel('Time (s)')
+ax.set_ylabel('Proximity')
+ax.set_title('Real-Time Change in Proximity')
+
+# Function to update the plot
+def update(frame):
+    if arduino.in_waiting > 0:
+        try:
+            # Read the proximity from Arduino
+            proximity = float(arduino.readline().decode('utf-8').strip())
+            time_data.append(frame)
+            proximity_data.append(proximity)
+
+            # Update the line data
+            line.set_data(time_data, proximity_data)
+
+            # Adjust x-axis limits
+            if frame >= 10:
+                ax.set_xlim(frame - 10, frame)
+
+            return line,
+        except ValueError:
+            pass  # Ignore any invalid data
+
+# Set up the animation
+ani = animation.FuncAnimation(fig, update, interval=1000) #this should continously call update and reload the figure since frame is not given specific number
+
+plt.show()
