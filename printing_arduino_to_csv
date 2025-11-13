@@ -1,0 +1,53 @@
+import serial
+from serial.serialutil import SerialException
+import time
+import csv
+import sys
+
+try:
+    # connection to arduino, cst error is that we cant open the serial port while it's busy
+    arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.001)
+except SerialException as e:
+    print(f"Error opening serial port: {e}")
+    sys.exit(1)
+
+#crete a function to save files to csv
+def save_to_file(csv_filename):
+    try:
+        with open(csv_filename, mode='a', newline='') as file:
+            writer = csv.writer(file) #create writer object to write in the lines of CSV file
+
+            if file.tell() == 0:
+                writer.writerow(["Timestamp", "Serial Data"])
+
+            print("Recording data ... press Ctrl + C to stop")
+            first_timestamp = 0
+        
+            while True:
+                try:
+                    serial_line = arduino.readline().decode('utf-8').strip()
+                    if serial_line : #only log non-empty lines
+                        timestamp = time.time() #time stamp in day month year, hour minute second
+                        if not first_timestamp:
+                            first_timestamp = timestamp
+                        zeroed_timestamp = timestamp - first_timestamp
+                        writer.writerow([zeroed_timestamp, serial_line]) #using writer object to begin writing data in new, empty lines
+                        file.flush() #data written immediately
+                        print(f"{zeroed_timestamp}-->{serial_line}") #prints for the user to see exactly what was printed in the CSV
+                except UnicodeDecodeError:
+                    print("Received undecodeable data") #if theres data that python cant understand we see ths error
+
+    except KeyboardInterrupt:
+        print("\nStopped by User")
+
+    except IOError:
+        print(f"File write error: {e}")
+
+    finally:
+        arduino.close()
+        print("Serial connection closed")
+
+
+if __name__ == '__main__':
+  save_to_file('proximity.csv')
+
