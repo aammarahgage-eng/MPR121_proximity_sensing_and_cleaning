@@ -1,6 +1,20 @@
-time_to_collect= int(input("how long(s) is this data collection"))
+import serial
+from serial.serialutil import SerialException
+import time
+import csv
+import sys
 
-save_to_file(f'csv_filename{i}', time_to_collect):
+try:
+    # connection to arduino 
+    arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.001)
+except SerialException as e:
+    print(f"Error opening serial port: {e}")
+    sys.exit(1)
+
+#create input function
+
+#create a function to save files to csv
+def save_to_file(csv_filename, data_collection_time=10.):
     try:
         with open(csv_filename, mode='a', newline='') as file:
             writer = csv.writer(file) #create writer object to write in the lines of CSV file
@@ -10,20 +24,26 @@ save_to_file(f'csv_filename{i}', time_to_collect):
 
             print("Recording data ... press Ctrl + C to stop")
             first_timestamp = 0
-        
-            while True:
-                try:
-                    serial_line = arduino.readline().decode('utf-8').strip()
-                    if serial_line : #only log non-empty lines
-                        timestamp = time.time() #time stamp in day month year, hour minute second
-                        if not first_timestamp:
-                            first_timestamp = timestamp
-                        zeroed_timestamp = timestamp - first_timestamp
-                        writer.writerow([zeroed_timestamp, serial_line]) #using writer object to begin writing data in new, empty lines
-                        file.flush() #data written immediately
-                        print(f"{zeroed_timestamp}-->{serial_line}") #prints for the user to see exactly what was printed in the CSV
-                except UnicodeDecodeError:
-                    print("Received undecodeable data") #if theres data that python cant understand we see ths error
+
+            try:
+                while True:
+                    try:
+                        serial_line = arduino.readline().decode('utf-8').strip()
+                        if serial_line : #only log non-empty lines
+                            timestamp = time.time() #time stamp in day month year, hour minute second
+                            if not first_timestamp:
+                                first_timestamp = timestamp
+                            zeroed_timestamp = timestamp - first_timestamp
+                            if zeroed_timestamp > data_collection_time:
+                                break
+                            writer.writerow([zeroed_timestamp, serial_line]) #using writer object to begin writing data in new, empty lines
+                            file.flush() #data written immediately
+                            print(f"{zeroed_timestamp}-->{serial_line}") #prints for the user to see exactly what was printed in the CSV
+
+                    except UnicodeDecodeError:
+                        print("Received undecodeable data") #if theres data that python cant understand we see ths error'
+            finally:
+                file.close()
 
     except KeyboardInterrupt:
         print("\nStopped by User")
@@ -31,22 +51,14 @@ save_to_file(f'csv_filename{i}', time_to_collect):
     except IOError:
         print(f"File write error: {e}")
 
-    finally:
-        arduino.close()
-        print("Serial connection closed")
-
-#the same input for the function should be the input needed for user input
-
-csv_filename= input("what is the name of this distance")
-time_to_collect= int(input("how long(s) is this data collection"))
-
 
 if __name__ == '__main__':
-  save_to_file(csv_filename.csv), time_to_collect
+  
+    while True:
+        data_collection_time = int(input("Enter how many seconds you want the data collection: "))
+        csv_filename = str(input("Enter how many centimeters you want the data collection: "))
+        save_to_file(csv_filename+ str('cm')+ str(" ") +str(str(data_collection_time) + 's'), data_collection_time)   
+   # arduino.close()
+   # print("Serial connection closed")
 
-#does the input function go in the defined part of the code or the main part?
 
-
-#for i in range(5):
-#     data[f"variable_{i}"] = i * 10
-#print(data["variable_2"]) 
